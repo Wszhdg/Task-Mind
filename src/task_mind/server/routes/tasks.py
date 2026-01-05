@@ -254,19 +254,29 @@ async def delete_task(task_id: str) -> ApiResponse:
     Returns:
         Success or error response
     """
+    from pathlib import Path
+    
     # Verify task exists
     task = TaskService.get_task(task_id)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found")
     
+    # Get session directory path before deletion
+    from task_mind.session.storage import get_session_dir
+    session_dir = get_session_dir(task_id, AgentType.CLAUDE)
+    
     # Delete from storage
     success = delete_session(task_id, AgentType.CLAUDE)
     
     if success:
+        # Verify deletion
+        if session_dir.exists():
+            return ApiResponse(status="error", error=f"Session directory still exists after deletion: {session_dir}")
+        
         # Refresh cache
         cache = CacheService.get_instance()
         await cache.refresh_tasks()
         
-        return ApiResponse(status="ok", message=f"Task {task_id[:8]} deleted")
+        return ApiResponse(status="ok", message=f"Task {task_id[:8]} deleted successfully")
     else:
         return ApiResponse(status="error", error="Failed to delete task")
