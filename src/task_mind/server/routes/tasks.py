@@ -15,8 +15,8 @@ from task_mind.server.models import (
     TaskStepResponse,
     TaskSummaryResponse,
     ToolUsageStatResponse,
-    ApiResponse,
 )
+from task_mind.server.routes.settings import ApiResponse
 from task_mind.server.services.cache_service import CacheService
 from task_mind.server.services.task_service import TaskService
 from task_mind.session.storage import delete_session
