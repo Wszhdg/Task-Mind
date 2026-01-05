@@ -408,6 +408,42 @@ async def open_working_directory() -> ApiResponse:
         return ApiResponse(status="error", error=str(e))
 
 
+class SelectDirectoryResponse(BaseModel):
+    """Response for directory selection"""
+    status: str
+    path: Optional[str] = None
+    error: Optional[str] = None
+
+
+@router.post("/settings/select-directory", response_model=SelectDirectoryResponse)
+async def select_directory() -> SelectDirectoryResponse:
+    """Open native directory picker and return selected path."""
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        
+        # Create hidden root window
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes('-topmost', True)
+        
+        # Open directory picker
+        selected_path = filedialog.askdirectory(
+            title="Select Project Directory",
+            mustexist=True
+        )
+        
+        root.destroy()
+        
+        if selected_path:
+            return SelectDirectoryResponse(status="ok", path=selected_path)
+        else:
+            return SelectDirectoryResponse(status="cancelled", error="No directory selected")
+            
+    except Exception as e:
+        return SelectDirectoryResponse(status="error", error=str(e))
+
+
 # ============================================================
 # VSCode Integration Endpoints
 # ============================================================

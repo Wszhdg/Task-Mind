@@ -936,3 +936,16 @@ export async function viewProjectFile(
   }
   return httpApi.viewProjectFile(runId, path);
 }
+
+// ============================================================
+// Directory Selection API
+// ============================================================
+
+export type { SelectDirectoryResponse } from './client';
+
+export async function selectDirectory(): Promise<httpApi.SelectDirectoryResponse> {
+  if (isPywebviewMode()) {
+    return { status: 'error', error: 'Not supported in pywebview mode' };
+  }
+  return httpApi.selectDirectory();
+}

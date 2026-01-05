@@ -485,6 +485,25 @@ export async function waitForApi(): Promise<void> {
 }
 
 // ============================================================
+// Directory Selection API
+// ============================================================
+
+export interface SelectDirectoryResponse {
+  status: string;
+  path?: string;
+  error?: string;
+}
+
+/**
+ * Open native directory picker and return selected path
+ */
+export async function selectDirectory(): Promise<SelectDirectoryResponse> {
+  return fetchApi<SelectDirectoryResponse>('/settings/select-directory', {
+    method: 'POST',
+  });
+}
+
+// ============================================================
 // Multi-Device Sync API
 // ============================================================
 

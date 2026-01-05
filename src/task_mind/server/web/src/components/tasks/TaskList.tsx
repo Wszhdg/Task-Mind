@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTasks } from '@/hooks/useTasks';
-import { startAgentTask } from '@/api';
+import * as api from '@/api';
 import { useAppStore } from '@/stores/appStore';
 import TaskCard from './TaskCard';
 import EmptyState from '@/components/ui/EmptyState';
@@ -10,7 +10,7 @@ import { Send, ClipboardList, Folder } from 'lucide-react';
 export default function TaskList() {
   const { t } = useTranslation();
   const { tasks, viewDetail, refresh } = useTasks();
-  const { config, updateConfig } = useAppStore();
+  const { config, updateConfig, showToast } = useAppStore();
   const [prompt, setPrompt] = useState('');
   const [projectPath, setProjectPath] = useState('');
   const [executionMode, setExecutionMode] = useState<'agent' | 'do' | 'run'>('agent');
@@ -31,7 +31,7 @@ export default function TaskList() {
         finalPrompt = `/task-mind.run ${trimmed}`;
       }
       
-      const result = await startAgentTask(finalPrompt, projectPath || undefined);
+      const result = await api.startAgentTask(finalPrompt, projectPath || undefined);
       if (result.status === 'ok') {
         setPrompt('');
         refresh?.();
@@ -50,13 +50,15 @@ export default function TaskList() {
 
   const handleSelectDirectory = async () => {
     try {
-      // @ts-ignore - showDirectoryPicker is not in TypeScript types yet
-      const dirHandle = await window.showDirectoryPicker();
-      // Get the directory path (name only, full path not available in browser)
-      setProjectPath(dirHandle.name);
+      const result = await api.selectDirectory();
+      if (result.status === 'ok' && result.path) {
+        setProjectPath(result.path);
+      } else if (result.status === 'error') {
+        showToast(result.error || 'Failed to select directory', 'error');
+      }
     } catch (err) {
-      // User cancelled or API not supported
-      console.log('Directory selection cancelled or not supported');
+      console.error('Directory selection failed:', err);
+      showToast('Failed to select directory', 'error');
     }
   };
 

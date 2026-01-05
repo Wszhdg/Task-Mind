@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Info, Folder } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
+import * as api from '@/api';
 import type { ConsoleMessage } from '@/types/console';
 import ConsoleControls from './ConsoleControls';
 import MessageList from './MessageList';
@@ -259,11 +260,15 @@ export default function ConsolePage() {
 
   const handleSelectDirectory = async () => {
     try {
-      // @ts-ignore - showDirectoryPicker is not in TypeScript types yet
-      const dirHandle = await window.showDirectoryPicker();
-      setProjectPath(dirHandle.name);
+      const result = await api.selectDirectory();
+      if (result.status === 'ok' && result.path) {
+        setProjectPath(result.path);
+      } else if (result.status === 'error') {
+        showToast(result.error || 'Failed to select directory', 'error');
+      }
     } catch (err) {
-      console.log('Directory selection cancelled or not supported');
+      console.error('Directory selection failed:', err);
+      showToast('Failed to select directory', 'error');
     }
   };
 
