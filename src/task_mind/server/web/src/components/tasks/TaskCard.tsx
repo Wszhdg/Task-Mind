@@ -1,9 +1,10 @@
 import type { TaskItem, TaskStatus } from '@/types/pywebview';
-import { Zap, Check, X, Circle, Clock, FileText, Wrench, ChevronRight, type LucideIcon } from 'lucide-react';
+import { Zap, Check, X, Circle, Clock, FileText, Wrench, ChevronRight, Trash2, type LucideIcon } from 'lucide-react';
 
 interface TaskCardProps {
   task: TaskItem;
   onClick: () => void;
+  onDelete?: (taskId: string) => void;
 }
 
 // Format relative time
@@ -41,9 +42,16 @@ const statusConfig: Record<TaskStatus, { label: string; Icon: LucideIcon }> = {
   cancelled: { label: 'Cancelled', Icon: Circle },
 };
 
-export default function TaskCard({ task, onClick }: TaskCardProps) {
+export default function TaskCard({ task, onClick, onDelete }: TaskCardProps) {
   const { label: statusLabel, Icon: StatusIcon } = statusConfig[task.status] || statusConfig.completed;
   const isRunning = task.status === 'running';
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onDelete) {
+      onDelete(task.session_id);
+    }
+  };
 
   return (
     <div className="task-card-v2" onClick={onClick}>
@@ -90,9 +98,20 @@ export default function TaskCard({ task, onClick }: TaskCardProps) {
         </div>
       </div>
 
-      {/* Right: Arrow */}
-      <div className="task-arrow">
-        <ChevronRight size={20} />
+      {/* Right: Delete button and Arrow */}
+      <div className="flex items-center gap-1">
+        {onDelete && !isRunning && (
+          <button
+            onClick={handleDelete}
+            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+            title="Delete task"
+          >
+            <Trash2 size={16} />
+          </button>
+        )}
+        <div className="task-arrow">
+          <ChevronRight size={20} />
+        </div>
       </div>
     </div>
   );

@@ -68,6 +68,25 @@ export default function TaskList() {
     refresh?.();
   };
 
+  const handleDeleteTask = async (taskId: string) => {
+    if (!confirm('确定要删除这个任务吗?这将从 Claude Code 中永久删除该任务的所有数据。')) {
+      return;
+    }
+
+    try {
+      const result = await api.deleteTask(taskId);
+      if (result.status === 'ok') {
+        showToast('任务已删除', 'success');
+        refresh?.();
+      } else {
+        showToast(result.error || '删除失败', 'error');
+      }
+    } catch (err) {
+      console.error('Delete task failed:', err);
+      showToast('删除任务失败', 'error');
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* AI Title Toggle */}
@@ -98,6 +117,7 @@ export default function TaskList() {
               key={task.session_id}
               task={task}
               onClick={() => viewDetail(task.session_id)}
+              onDelete={handleDeleteTask}
             />
           ))}
         </div>

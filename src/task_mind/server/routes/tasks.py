@@ -15,9 +15,12 @@ from task_mind.server.models import (
     TaskStepResponse,
     TaskSummaryResponse,
     ToolUsageStatResponse,
+    ApiResponse,
 )
 from task_mind.server.services.cache_service import CacheService
 from task_mind.server.services.task_service import TaskService
+from task_mind.session.storage import delete_session
+from task_mind.session.models import AgentType
 
 router = APIRouter()
 
@@ -239,3 +242,31 @@ async def get_task_steps(
         total=result.get("total", len(steps)),
         has_more=result.get("has_more", False),
     )
+
+
+@router.delete("/tasks/{task_id}", response_model=ApiResponse)
+async def delete_task(task_id: str) -> ApiResponse:
+    """Delete a task and its session data from Claude Code.
+    
+    Args:
+        task_id: Task/session identifier
+        
+    Returns:
+        Success or error response
+    """
+    # Verify task exists
+    task = TaskService.get_task(task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found")
+    
+    # Delete from storage
+    success = delete_session(task_id, AgentType.CLAUDE)
+    
+    if success:
+        # Invalidate cache
+        cache = CacheService.get_instance()
+        await cache.invalidate_tasks()
+        
+        return ApiResponse(status="ok", message=f"Task {task_id[:8]} deleted")
+    else:
+        return ApiResponse(status="error", error="Failed to delete task")

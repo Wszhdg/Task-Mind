@@ -209,6 +209,14 @@ export async function startAgentTask(
   };
 }
 
+export async function deleteTask(taskId: string): Promise<{ status: string; message?: string; error?: string }> {
+  if (isPywebviewMode()) {
+    return { status: 'error', error: 'Delete not supported in pywebview mode' };
+  }
+
+  return httpApi.deleteTask(taskId);
+}
+
 export async function continueAgentTask(
   sessionId: string,
   prompt: string

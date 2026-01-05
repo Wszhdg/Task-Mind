@@ -197,6 +197,12 @@ export async function getTasks(options?: {
   return fetchApi<TaskListResponse>(`/tasks${query ? `?${query}` : ''}`);
 }
 
+export async function deleteTask(taskId: string): Promise<ApiResponse> {
+  return fetchApi<ApiResponse>(`/tasks/${encodeURIComponent(taskId)}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function getTask(taskId: string): Promise<TaskDetail> {
   return fetchApi<TaskDetail>(`/tasks/${encodeURIComponent(taskId)}`);
 }
