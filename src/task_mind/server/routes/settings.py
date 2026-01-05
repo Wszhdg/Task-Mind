@@ -419,26 +419,69 @@ class SelectDirectoryResponse(BaseModel):
 async def select_directory() -> SelectDirectoryResponse:
     """Open native directory picker and return selected path."""
     try:
-        import tkinter as tk
-        from tkinter import filedialog
+        system = platform.system()
         
-        # Create hidden root window
-        root = tk.Tk()
-        root.withdraw()
-        root.attributes('-topmost', True)
-        
-        # Open directory picker
-        selected_path = filedialog.askdirectory(
-            title="Select Project Directory",
-            mustexist=True
-        )
-        
-        root.destroy()
-        
-        if selected_path:
-            return SelectDirectoryResponse(status="ok", path=selected_path)
+        if system == "Darwin":
+            # macOS: use osascript
+            result = subprocess.run(
+                ["osascript", "-e", 'POSIX path of (choose folder with prompt "Select Project Directory")'],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            if result.returncode == 0:
+                selected_path = result.stdout.strip()
+                return SelectDirectoryResponse(status="ok", path=selected_path)
+            else:
+                return SelectDirectoryResponse(status="cancelled", error="No directory selected")
+                
+        elif system == "Linux":
+            # Linux: try zenity first, then kdialog
+            if shutil.which("zenity"):
+                result = subprocess.run(
+                    ["zenity", "--file-selection", "--directory", "--title=Select Project Directory"],
+                    capture_output=True,
+                    text=True,
+                    check=False
+                )
+            elif shutil.which("kdialog"):
+                result = subprocess.run(
+                    ["kdialog", "--getexistingdirectory", ".", "--title", "Select Project Directory"],
+                    capture_output=True,
+                    text=True,
+                    check=False
+                )
+            else:
+                return SelectDirectoryResponse(status="error", error="No dialog tool available (zenity or kdialog required)")
+            
+            if result.returncode == 0:
+                selected_path = result.stdout.strip()
+                return SelectDirectoryResponse(status="ok", path=selected_path)
+            else:
+                return SelectDirectoryResponse(status="cancelled", error="No directory selected")
+                
+        elif system == "Windows":
+            # Windows: use PowerShell
+            ps_script = """
+            Add-Type -AssemblyName System.Windows.Forms
+            $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+            $dialog.Description = 'Select Project Directory'
+            $result = $dialog.ShowDialog()
+            if ($result -eq 'OK') { Write-Output $dialog.SelectedPath }
+            """
+            result = subprocess.run(
+                ["powershell", "-Command", ps_script],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                selected_path = result.stdout.strip()
+                return SelectDirectoryResponse(status="ok", path=selected_path)
+            else:
+                return SelectDirectoryResponse(status="cancelled", error="No directory selected")
         else:
-            return SelectDirectoryResponse(status="cancelled", error="No directory selected")
+            return SelectDirectoryResponse(status="error", error=f"Unsupported platform: {system}")
             
     except Exception as e:
         return SelectDirectoryResponse(status="error", error=str(e))
