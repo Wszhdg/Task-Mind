@@ -567,7 +567,7 @@ def get_session_data(
 def delete_session(
     session_id: str, agent_type: AgentType = AgentType.CLAUDE
 ) -> bool:
-    """Delete session data
+    """Delete session data from both Claude Code and Task-Mind
 
     Args:
         session_id: Session ID
@@ -579,36 +579,56 @@ def delete_session(
     import shutil
     import sys
 
+    # Get session metadata to find project path
+    metadata = read_metadata(session_id, agent_type)
+    if not metadata:
+        print(f"[DELETE] ERROR: Session metadata not found", file=sys.stderr)
+        return False
+    
     session_dir = get_session_dir(session_id, agent_type)
     
-    # Force print to stdout for debugging
     print(f"[DELETE] Attempting to delete session {session_id}", file=sys.stderr)
-    print(f"[DELETE] Directory: {session_dir}", file=sys.stderr)
-    print(f"[DELETE] Directory exists: {session_dir.exists()}", file=sys.stderr)
-    
-    logger.info(f"Attempting to delete session {session_id}, directory: {session_dir}")
+    print(f"[DELETE] Task-Mind directory: {session_dir}", file=sys.stderr)
+    print(f"[DELETE] Project path: {metadata.project_path}", file=sys.stderr)
 
+    # Delete Claude Code original data
+    if agent_type == AgentType.CLAUDE and metadata.project_path:
+        from task_mind.session.sync import encode_project_path, CLAUDE_PROJECTS_DIR
+        
+        encoded_path = encode_project_path(metadata.project_path)
+        claude_session_file = CLAUDE_PROJECTS_DIR / encoded_path / f"{session_id}.jsonl"
+        
+        print(f"[DELETE] Claude Code file: {claude_session_file}", file=sys.stderr)
+        
+        if claude_session_file.exists():
+            try:
+                claude_session_file.unlink()
+                print(f"[DELETE] Claude Code file deleted", file=sys.stderr)
+            except Exception as e:
+                print(f"[DELETE] Failed to delete Claude Code file: {e}", file=sys.stderr)
+                logger.error(f"Failed to delete Claude Code file {claude_session_file}: {e}")
+                return False
+        else:
+            print(f"[DELETE] Claude Code file does not exist", file=sys.stderr)
+
+    # Delete Task-Mind copy
     if not session_dir.exists():
-        print(f"[DELETE] ERROR: Directory does not exist", file=sys.stderr)
-        logger.warning(f"Session directory does not exist: {session_dir}")
+        print(f"[DELETE] Task-Mind directory does not exist", file=sys.stderr)
         return False
 
     try:
-        print(f"[DELETE] Calling shutil.rmtree...", file=sys.stderr)
+        print(f"[DELETE] Deleting Task-Mind directory...", file=sys.stderr)
         shutil.rmtree(session_dir)
-        print(f"[DELETE] shutil.rmtree completed", file=sys.stderr)
+        print(f"[DELETE] Task-Mind directory deleted", file=sys.stderr)
         logger.info(f"Successfully deleted session: {session_id}")
         
         # Verify deletion
-        still_exists = session_dir.exists()
-        print(f"[DELETE] Directory still exists after rmtree: {still_exists}", file=sys.stderr)
-        
-        if still_exists:
-            print(f"[DELETE] ERROR: Directory still exists after deletion!", file=sys.stderr)
+        if session_dir.exists():
+            print(f"[DELETE] ERROR: Task-Mind directory still exists after deletion!", file=sys.stderr)
             logger.error(f"Session directory still exists after rmtree: {session_dir}")
             return False
             
-        print(f"[DELETE] SUCCESS: Directory deleted", file=sys.stderr)
+        print(f"[DELETE] SUCCESS: Session completely deleted", file=sys.stderr)
         return True
     except Exception as e:
         print(f"[DELETE] EXCEPTION: {e}", file=sys.stderr)
