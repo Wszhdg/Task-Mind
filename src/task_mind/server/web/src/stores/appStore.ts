@@ -39,6 +39,15 @@ const CONSOLE_SESSION_KEY = 'task-mind-console-session';
 const CONSOLE_MESSAGES_KEY = 'task-mind-console-messages';
 const CONSOLE_RUNNING_KEY = 'task-mind-console-running';
 
+// Helper to get initial page from URL
+function getInitialPageFromURL(): { page: PageType; id?: string } {
+  const hash = window.location.hash.slice(1); // Remove #
+  if (!hash) return { page: 'tasks' };
+  
+  const [page, id] = hash.split('/');
+  return { page: page as PageType, id };
+}
+
 // Toast type
 export type ToastType = 'info' | 'success' | 'warning' | 'error';
 
@@ -173,12 +182,15 @@ function getInitialConsoleState() {
   }
 }
 
-export const useAppStore = create<AppState>((set, get) => ({
-  // Initial state - default to 'tasks' page per spec
-  currentPage: 'tasks',
-  currentTaskId: null,
-  currentRecipeName: null,
-  currentProjectId: null,
+export const useAppStore = create<AppState>((set, get) => {
+  const initialRoute = getInitialPageFromURL();
+  
+  return {
+  // Initial state - from URL or default to 'tasks'
+  currentPage: initialRoute.page,
+  currentTaskId: initialRoute.page === 'task_detail' ? initialRoute.id ?? null : null,
+  currentRecipeName: initialRoute.page === 'recipe_detail' ? initialRoute.id ?? null : null,
+  currentProjectId: initialRoute.page === 'project_detail' ? initialRoute.id ?? null : null,
   sidebarCollapsed: getInitialSidebarCollapsed(),
   config: null,
   tasks: [],
@@ -198,6 +210,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // Page switching
   switchPage: (page, id) => {
+    // Update URL hash
+    const hash = id ? `#${page}/${id}` : `#${page}`;
+    window.history.pushState(null, '', hash);
+    
     set({
       currentPage: page,
       currentTaskId: page === 'task_detail' ? id ?? null : null,
@@ -565,4 +581,5 @@ export const useAppStore = create<AppState>((set, get) => ({
       // localStorage not available
     }
   },
-}));
+};
+});

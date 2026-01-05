@@ -27,12 +27,28 @@ import Toast from '@/components/ui/Toast';
 import { InitWizardModal } from '@/components/init';
 
 function App() {
-  const { currentPage, loadConfig, toasts } = useAppStore();
+  const { currentPage, loadConfig, toasts, switchPage } = useAppStore();
   const [apiReady, setApiReady] = useState(isApiReady());
   const [showInitWizard, setShowInitWizard] = useState(false);
 
   // Subscribe to WebSocket data push for real-time updates
   useDataSync();
+
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      const hash = window.location.hash.slice(1);
+      if (!hash) {
+        switchPage('tasks');
+        return;
+      }
+      const [page, id] = hash.split('/');
+      switchPage(page as any, id);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [switchPage]);
 
   useEffect(() => {
     const initApi = async () => {
